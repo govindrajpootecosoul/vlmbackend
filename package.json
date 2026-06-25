@@ -10,7 +10,7 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
-    "build": "node --check src/app.js && node --check api/index.js && echo Backend build OK",
+    "build": "node --check src/app.js && node --check \"api/[[...slug]].js\" && echo Backend build OK",
     "seed": "node src/seed/seedData.js"
   },
   "dependencies": {
