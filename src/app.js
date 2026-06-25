@@ -44,6 +44,27 @@ export const createApp = () => {
     : path.join(__dirname, '../uploads');
   app.use('/uploads', express.static(uploadsPath));
 
+  const rootMessage = (req, res) => {
+    res.json({
+      success: true,
+      message: 'VLM Academy Backend is running',
+      status: 'online',
+      timestamp: new Date().toISOString(),
+      endpoints: {
+        health: '/api/health',
+        auth: '/api/auth',
+        student: '/api/student',
+        teacher: '/api/teacher',
+        parent: '/api/parent',
+      },
+      database: process.env.MONGODB_URI ? 'configured' : 'MONGODB_URI missing — add in Vercel env',
+    });
+  };
+
+  // Root URLs — no database needed
+  app.get('/', rootMessage);
+  app.get('/api', rootMessage);
+
   // Health check — no DB required (for Vercel monitoring)
   app.get('/api/health', (req, res) => {
     res.json({
