@@ -1,21 +1,21 @@
 import mongoose from 'mongoose';
 
-let cached = global.mongoose;
-
-if (!cached) {
-  cached = global.mongoose = { conn: null, promise: null };
-}
+const cached = global.mongoose ?? { conn: null, promise: null };
+global.mongoose = cached;
 
 export const connectDB = async () => {
   if (cached.conn) return cached.conn;
 
-  if (!process.env.MONGODB_URI) {
-    throw new Error('MONGODB_URI is not defined');
+  const uri = process.env.MONGODB_URI;
+  if (!uri) {
+    throw new Error('MONGODB_URI is not defined in environment variables');
   }
 
   if (!cached.promise) {
-    cached.promise = mongoose.connect(process.env.MONGODB_URI, {
+    cached.promise = mongoose.connect(uri, {
       bufferCommands: false,
+      serverSelectionTimeoutMS: 10000,
+      socketTimeoutMS: 45000,
     }).then((conn) => {
       console.log(`MongoDB connected: ${conn.connection.host}`);
       return conn;
@@ -27,7 +27,6 @@ export const connectDB = async () => {
   } catch (error) {
     cached.promise = null;
     console.error('MongoDB connection error:', error.message);
-    if (!process.env.VERCEL) process.exit(1);
     throw error;
   }
 

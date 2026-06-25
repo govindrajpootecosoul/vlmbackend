@@ -38,20 +38,39 @@ export const createApp = () => {
 
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true }));
-  app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-  // Connect DB on each cold start (cached inside connectDB)
+  const uploadsPath = process.env.VERCEL
+    ? path.join('/tmp', 'vlm-uploads')
+    : path.join(__dirname, '../uploads');
+  app.use('/uploads', express.static(uploadsPath));
+
+  // Health check — no DB required (for Vercel monitoring)
+  app.get('/api/health', (req, res) => {
+    res.json({
+      success: true,
+      message: 'VLM Academy API is running',
+      timestamp: new Date(),
+      env: {
+        node: process.version,
+        hasMongoUri: !!process.env.MONGODB_URI,
+        vercel: !!process.env.VERCEL,
+      },
+    });
+  });
+
+  // DB connection for all other routes
   app.use(async (req, res, next) => {
     try {
       await connectDB();
       next();
     } catch (err) {
-      next(err);
+      console.error('DB middleware error:', err.message);
+      res.status(503).json({
+        success: false,
+        message: 'Database connection failed',
+        hint: 'Check MONGODB_URI in Vercel Environment Variables',
+      });
     }
-  });
-
-  app.get('/api/health', (req, res) => {
-    res.json({ success: true, message: 'VLM Academy API is running', timestamp: new Date() });
   });
 
   app.use('/api/auth', authRoutes);

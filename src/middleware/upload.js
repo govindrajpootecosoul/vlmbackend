@@ -4,15 +4,28 @@ import { fileURLToPath } from 'url';
 import fs from 'fs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const uploadDir = path.join(__dirname, '../../uploads');
 
-['profiles', 'documents', 'videos', 'recordings', 'tickets'].forEach((dir) => {
-  const p = path.join(uploadDir, dir);
-  if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true });
-});
+// Vercel serverless = read-only filesystem; use /tmp for uploads
+const uploadDir = process.env.VERCEL
+  ? path.join('/tmp', 'vlm-uploads')
+  : path.join(__dirname, '../../uploads');
+
+const ensureDirs = () => {
+  try {
+    ['profiles', 'documents', 'videos', 'recordings', 'tickets'].forEach((dir) => {
+      const p = path.join(uploadDir, dir);
+      if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true });
+    });
+  } catch (err) {
+    console.warn('Upload dir init skipped:', err.message);
+  }
+};
+
+ensureDirs();
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
+    ensureDirs();
     let folder = 'documents';
     if (file.mimetype.startsWith('image/')) folder = 'profiles';
     if (file.mimetype.startsWith('video/')) folder = 'videos';
